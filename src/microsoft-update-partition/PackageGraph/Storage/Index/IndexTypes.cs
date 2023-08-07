@@ -9,6 +9,7 @@ namespace Microsoft.PackageGraph.Storage.Index
     {
         public const string TitlesIndexName = "titles";
         public const string DescriptionsIndexName = "descriptions";
+        public const string CreationDatesIndexName = "creationDates";
     }
 
     class InternalIndexFactory : IIndexFactory
@@ -19,6 +20,7 @@ namespace Microsoft.PackageGraph.Storage.Index
             {
                 AvailableIndexes.TitlesIndexName => new TitlesIndex(container),
                 AvailableIndexes.DescriptionsIndexName => new DescriptionsIndex(container),
+                AvailableIndexes.CreationDatesIndexName => new CreationDatesIndex(container),
                 _ => throw new NotImplementedException(),
             };
         }
