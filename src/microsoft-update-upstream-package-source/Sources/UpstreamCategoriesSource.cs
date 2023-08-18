@@ -143,8 +143,8 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Source
 			return categoriesList;
 		}
 
-		/// <inheritdoc cref="IMetadataSource.CopyTo(IMetadataSink, CancellationToken)"/>
-		public void CopyTo(IMetadataSink destination, CancellationToken cancelToken)
+        /// <inheritdoc cref="IMetadataSource.CopyTo(IMetadataSink, CancellationToken)"/>
+        public void CopyTo(IMetadataSink destination, CancellationToken cancelToken)
         {
             RetrievePackageIdentities();
 
