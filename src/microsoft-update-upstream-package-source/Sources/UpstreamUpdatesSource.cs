@@ -127,7 +127,11 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Source
                     }                    
                 });
             }
-        }
+			else
+			{
+				MetadataCopyProgress?.Invoke(this, new PackageStoreEventArgs());
+			}
+		}
 
         /// <inheritdoc cref="IMetadataSource.CopyTo(IMetadataSink, IMetadataFilter, CancellationToken)"/>
         public void CopyTo(IMetadataSink destination, IMetadataFilter filter, CancellationToken cancelToken)
