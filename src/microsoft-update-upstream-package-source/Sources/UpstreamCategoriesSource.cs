@@ -91,43 +91,57 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Source
             return batches;
         }
 
-        /// <summary>
-        /// Retrieves categories from the upstream source
-        /// </summary>
-        /// <param name="cancelToken">Cancellation token</param>
-        /// <returns>List of Microsoft Update categories</returns>
-        public List<MicrosoftUpdatePackage> GetCategories(CancellationToken cancelToken)
-        {
-            var categoriesList = new List<MicrosoftUpdatePackage>();
+		/// <summary>
+		/// Retrieves categories from the upstream source
+		/// </summary>
+		/// <param name="cancelToken">Cancellation token</param>
+		/// <param name="excludedPackageIds">A list of GUIDs to exclude from the retrieval</param>
+		/// <returns>List of Microsoft Update categories</returns>
+		public List<MicrosoftUpdatePackage> GetCategories(CancellationToken cancelToken, IEnumerable<Guid> excludedPackageIds = null)
+		{
+			excludedPackageIds ??= Array.Empty<Guid>();
 
-            RetrievePackageIdentities();
+			var categoriesList = new List<MicrosoftUpdatePackage>();
 
-            var batches = CreateBatchedListFromFlatList(_Identities, 50);
+			RetrievePackageIdentities();
 
-            var progressArgs = new PackageStoreEventArgs() { Total = _Identities.Count, Current = 0 };
-            batches.ForEach(batch =>
-            {
-                if (cancelToken.IsCancellationRequested)
-                {
-                    return;
-                }
+			var unavailableUpdates = _Identities
+				.Where(u => !excludedPackageIds.Any(e => u.ID == e))
+				.ToList();
 
-                var retrievedBatch = _Client.GetUpdateDataForIds(batch.ToList());
+			if (unavailableUpdates.Count > 0)
+			{
+				var batches = CreateBatchedListFromFlatList(unavailableUpdates, 50);
 
-                lock (categoriesList)
-                {
-                    categoriesList.AddRange(retrievedBatch);
-                }
+				var progressArgs = new PackageStoreEventArgs() { Total = unavailableUpdates.Count, Current = 0 };
+				batches.ForEach(batch =>
+				{
+					if (cancelToken.IsCancellationRequested)
+					{
+						return;
+					}
 
-                lock (progressArgs)
-                {
-                    progressArgs.Current += retrievedBatch.Count;
-                    MetadataCopyProgress?.Invoke(this, progressArgs);
-                }
-            });
+					var retrievedBatch = _Client.GetUpdateDataForIds(batch.ToList());
 
-            return categoriesList;
-        }
+					lock (categoriesList)
+					{
+						categoriesList.AddRange(retrievedBatch);
+					}
+
+					lock (progressArgs)
+					{
+						progressArgs.Current += retrievedBatch.Count;
+						MetadataCopyProgress?.Invoke(this, progressArgs);
+					}
+				});
+			}
+			else
+			{
+				MetadataCopyProgress?.Invoke(this, new PackageStoreEventArgs());
+			}
+
+			return categoriesList;
+		}
 
         /// <inheritdoc cref="IMetadataSource.CopyTo(IMetadataSink, CancellationToken)"/>
         public void CopyTo(IMetadataSink destination, CancellationToken cancelToken)

@@ -87,8 +87,60 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Source
             return batches;
         }
 
-        /// <inheritdoc cref="IMetadataSource.CopyTo(IMetadataSink, CancellationToken)"/>
-        public void CopyTo(IMetadataSink destination, CancellationToken cancelToken)
+		/// <summary>
+		/// Retrieves products from the upstream source
+		/// </summary>
+		/// <param name="cancelToken">Cancellation token</param>
+		/// <param name="excludedPackageIds">A list of GUIDs to exclude from the retrieval</param>
+		/// <returns>List of Microsoft Update updates</returns>
+		public List<MicrosoftUpdatePackage> GetUpdates(CancellationToken cancelToken, IEnumerable<Guid> excludedPackageIds = null)
+		{
+			excludedPackageIds ??= Array.Empty<Guid>();
+
+			var updatesList = new List<MicrosoftUpdatePackage>();
+
+			RetrievePackageIdentities();
+
+			var unavailableUpdates = _Identities
+				.Where(u => !excludedPackageIds.Any(e => u.ID == e))
+				.ToList();
+
+			if (unavailableUpdates.Count > 0)
+			{
+				var batches = CreateBatchedListFromFlatList(unavailableUpdates, 50);
+
+				var progressArgs = new PackageStoreEventArgs() { Total = unavailableUpdates.Count, Current = 0 };
+				batches.ForEach(batch =>
+				{
+					if (cancelToken.IsCancellationRequested)
+					{
+						return;
+					}
+
+					var retrievedBatch = _Client.GetUpdateDataForIds(batch.ToList());
+
+					lock (updatesList)
+					{
+						updatesList.AddRange(retrievedBatch);
+					}
+
+					lock (progressArgs)
+					{
+						progressArgs.Current += retrievedBatch.Count;
+						MetadataCopyProgress?.Invoke(this, progressArgs);
+					}
+				});
+			}
+			else
+			{
+				MetadataCopyProgress?.Invoke(this, new PackageStoreEventArgs());
+			}
+
+			return updatesList;
+		}
+
+		/// <inheritdoc cref="IMetadataSource.CopyTo(IMetadataSink, CancellationToken)"/>
+		public void CopyTo(IMetadataSink destination, CancellationToken cancelToken)
         {
             RetrievePackageIdentities();
 
@@ -127,7 +179,11 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Source
                     }                    
                 });
             }
-        }
+			else
+			{
+				MetadataCopyProgress?.Invoke(this, new PackageStoreEventArgs());
+			}
+		}
 
         /// <inheritdoc cref="IMetadataSource.CopyTo(IMetadataSink, IMetadataFilter, CancellationToken)"/>
         public void CopyTo(IMetadataSink destination, IMetadataFilter filter, CancellationToken cancelToken)
