@@ -58,6 +58,11 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Compression
                 var expandProcess = Process.Start(startInfo);
                 expandProcess.WaitForExit();
 
+                if (expandProcess.ExitCode != 0)
+                {
+                    throw new Exception("expand.exe failed to extract data.");
+                }
+
                 using var decompresedFile = File.OpenRead(xmlTempFile);
                 using var recompressor = new GZipStream(inMemoryStream, CompressionLevel.Fastest, true);
                 decompresedFile.CopyTo(recompressor);
@@ -83,7 +88,7 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Compression
             }
             else
             {
-                return null;
+                throw new Exception("Failed to extract cab!");
             }
         }
 
@@ -111,13 +116,19 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Compression
                 var text = expandProcess.StandardOutput.ReadToEnd();
                 expandProcess.WaitForExit();
 
+                if (expandProcess.ExitCode != 0)
+                {
+                    throw new Exception("cabextract failed to extract data.");
+                }
+
                 // Recompress the XML with GZIP as UTF8
                 using var recompressor = new GZipStream(inMemoryStream, CompressionLevel.Fastest, true);
                 recompressor.Write(Encoding.UTF8.GetBytes(text));
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.Error.WriteLine($"Error: {ex.Message}");
                 inMemoryStream = null;
             }
 
@@ -132,7 +143,7 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Compression
             }
             else
             {
-                return null;
+                throw new Exception("Failed to extract cab!");
             }
         }
 
