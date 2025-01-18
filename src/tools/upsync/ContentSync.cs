@@ -86,6 +86,7 @@ namespace Microsoft.PackageGraph.Utilitites.Upsync
         }
 
         static string ContentSyncLastFileDigest = "";
+        static int PreviousProgress = -1;
 
         private static void UpdateConsoleForMessageRefresh()
         {
@@ -105,13 +106,20 @@ namespace Microsoft.PackageGraph.Utilitites.Upsync
             {
                 Console.WriteLine();
                 ContentSyncLastFileDigest = e.File.Digest.DigestBase64;
+                PreviousProgress = -1;
             }
 
             switch(e.CurrentOperation)
             {
                 case ObjectModel.PackagesOperationType.DownloadFileProgress:
+                    var Progress = (int) e.PercentDone;
+                    if (Progress == PreviousProgress)
+                    {
+                        break;
+                    }
+                    PreviousProgress = Progress;
                     UpdateConsoleForMessageRefresh();
-                    Console.Write("Sync'ing update content [{0}]: {1:000.00}%", e.Maximum, e.PercentDone);
+                    Console.Write("Syncing update content [{0}]: {1}%", e.Maximum, Progress);
                     break;
             }
         }
