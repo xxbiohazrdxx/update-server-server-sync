@@ -47,11 +47,7 @@ namespace Microsoft.PackageGraph.Utilitites.Upsync
 
             filesToDownload = filesToDownload.Distinct().ToList();
 
-            Console.WriteLine($"Sync {filesToDownload.Count} files, {filesToDownload.Sum(f => (long)f.Size)} bytes. Continue? (y/n)");
-            if (Console.ReadKey().Key != ConsoleKey.Y)
-            {
-                return;
-            }
+            Console.WriteLine($"Sync {filesToDownload.Count} files, {filesToDownload.Sum(f => (long)f.Size)} bytes.");
 
             CancellationTokenSource cancelTokenSource = new();
             contentStore.Progress += ContentStore_Progress;
